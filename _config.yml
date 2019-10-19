@@ -48,7 +48,7 @@ comments:
 mathjax: true
 
 # Share
-social-share: true
+social-share: false
 social-share-items: ['zhihu']
 
 # theme color 主题皮肤
@@ -61,7 +61,6 @@ postPatterns: 'circuitBoard'
 # url: email, weibo, zhihu, twitter, instagram, juejin, github, douban, facebook, dribble, uicn, jianshu, medium, linkedin
 sns:
   github: '//github.com/suyouqi29029'
-  zhiyu: '//zhihu.com/people/su-you-qi-17-87/activities'
 
 # Tags 设置标签
 recommend-tags: true # whether or not display recommend-tags on the sidebar
