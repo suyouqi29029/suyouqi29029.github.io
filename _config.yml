@@ -18,9 +18,9 @@ baseurl: ''
 nav:
   主页: '/'
   我的学习: '/study.html'
-  技术文章: '/'
-  我的旅行: '/'
-  关于我: '/'
+  技术文章: '/tech.html'
+  我的旅行: '/travel.html'
+  关于我: '/me.html'
   tags: '/tags.html'
 
 # Footer
@@ -31,7 +31,7 @@ footer:
 author: 'su29029'
 nickname: ''
 bio: '前端开发者，热爱旅行，徒步登山，向往自由。世界那么大，去玩玩看看'
-avatar: '/assets/img/.png'
+avatar: '/assets/img/mypicture.png'
 
 # Search
 search: true
@@ -64,10 +64,10 @@ sns:
 
 # Tags 设置标签
 recommend-tags: true # whether or not display recommend-tags on the sidebar
-recommend-condition-size: 12 # a tag will be recommended if the size of it is more than this value
+recommend-condition-size: 8 # a tag will be recommended if the size of it is more than this value
 
 # Build settings
-paginate: 6
+paginate: 7
 paginate_path: 'page:num'
 exclude: ['node_modules', 'dev', 'package.json', 'gulpfile.js', '.gitignore', 'README.md']
 
