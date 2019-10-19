@@ -7,7 +7,7 @@ cover: '../assets/img/Jekyll.png'
 tags: 建站
 ---
 
-> Transform your plain text into static websites and blogs.
+> 建站真是一个麻烦又有趣的事情。
 
 ### 0x01起因
 
