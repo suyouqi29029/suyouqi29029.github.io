@@ -19,11 +19,9 @@ nav:
   主页: '/'
   我的学习: '/study.html'
   技术文章: '/'
-  我的旅行: ''
-  关于我: ''
-
-hide: (つェ⊂)我藏好啦
-show: ´∇｀ 呀被发现啦~ 
+  我的旅行: '/'
+  关于我: '/'
+  tags: '/tags.html'
 
 # Footer
 footer:
@@ -33,7 +31,7 @@ footer:
 author: 'su29029'
 nickname: ''
 bio: '前端开发者，热爱旅行，徒步登山，向往自由。世界那么大，去玩玩看看'
-avatar: '/assets/img/profile.png'
+avatar: '/assets/img/.png'
 
 # Search
 search: true
