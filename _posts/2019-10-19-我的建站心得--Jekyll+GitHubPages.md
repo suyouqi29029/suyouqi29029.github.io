@@ -6,8 +6,9 @@ author: su29029
 cover: '../assets/img/Jekyll.png'
 tags: 建站
 ---
-
 >建站真是件麻烦又有趣的事情。
+
+
 
 说到给自己搭个博客，真的是一言难尽......从一开始打算用wordpress到后来打算hexo再到后来Jekyll，最终Jekyll总算成功了（当然感谢GitHubPages的技术支持233333）来分享一下我的建站心得吧。
 
