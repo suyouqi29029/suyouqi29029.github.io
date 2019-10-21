@@ -1,9 +1,9 @@
 ---
 layout: post
-title: 谈谈对MVC，MVP，MVVM设计模式的理解
+title: 谈谈对MVC,MVP,MVVM设计模式的理解
 date: 2019-10-21
 author: su29029
-cover: '/assets/img/谈谈对MVC，MVP，MVVM设计模式的理解/title.jpg'
+cover: '/assets/img/谈谈对MVC,MVP,MVVM设计模式的理解/title.jpg'
 tags: 软件工程
 ---
 
