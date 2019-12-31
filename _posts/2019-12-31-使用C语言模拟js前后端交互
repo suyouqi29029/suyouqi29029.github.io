@@ -1,0 +1,331 @@
+---
+author: su29029
+layout: post
+title: 使用C语言模拟js前后端交互
+date: 2019-12-31
+cover: '../assets/img/C语言模拟前后端交互/title.png'
+tags: C语言 网络编程
+---
+
+最近一个月复习了初中学习的C语言，刚好学校C语言要做一个期末设计的作业，作为一个web开发者总想着在自己的代码里加一点跟服务器有关的东西，那么，不如用C语言实现一波js的前后端交互吧。   
+
+## 0x01 首先我们来看一下js的前后端交互是如何完成的
+我们举一个比较简单的例子，来看看js的前后端交互是如何完成的。
+```javascript
+function postAjax(url, data, success) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', url, true);
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState == 4 && xhr.status == 200) {
+            success(xhr.responseText);
+        }
+    }
+    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    xhr.send(data);
+    return xhr;
+}
+
+function success(response) {
+    console.log(response);
+}
+postAjax("http://example.com", "a=1&b=2", success);
+```
+
+上面这段代码使用ES5标准原生发送了Ajax Post请求，本质上这是一个http请求。  
+我们主要看第11行，```xhr.send(data);```这一行代码的作用是将构造好的http请求头发送到example.com。整个发送过程是完全封装的，XMLHttpRequest对象的send方法帮助我们完成了整个发送过程，不需要我们自己实现。但是如果是C语言，封装程度比较低，我们就需要自己完成一些请求的发送过程了。
+## 0x02 一个请求的发送过程中都会发生什么
+我们大致分析一下请求的发送过程都会经历那些步骤：  
+1.解析URL  
+2.DNS查询  
+3.封包  
+4.与服务器建立连接  
+5.发送请求  
+6.服务器请求处理  
+那么也就说明我们的```xhr.send(data);```这一行代码完成了请求发送过程的前五步。  
+(关于请求发送过程详见我的另一篇文章https://su29029.github.io/2019/10/20/当在浏览器中输入www.baidu.com并按下回车后-都发生了什么.html)
+## 0x03 借助套接字完成前台与服务器的链接
+这里我们省去解析URL和DNS查询的过程，直接向某一ip地址发送请求。  
+使用套接字完成服务器端构建一共需要8步：创建套接字，设置套接字地址结构，绑定套接字，设置监听，接收请求，获取请求内容，响应客户端请求，关闭套接字。  
+这里我们只简略的讲述每一步的过程，这其中每一步的操作都非常复杂，单独出来都能写一篇很长的文章，所以这里只简要介绍，想要深入了解C语言 UNIX 套接字编程，可以阅读《UNIX网络编程》一书。
+#### 第一步 创建套接字
+函数原型:```int socket(int family,int type,int protocol);```  
+其中：  
+family: family指的是协议簇，可选的有AF_INET,PF_INET,AF_INET6,PF_INET6 前两个代表使用ipv4协议，后两个代表使用ipv6协议。还有些不常使用的AF_LOCAL,AF_ROUTE,AF_KEY等。  
+type: type代表使用的套接字类型，可选的有SOCK_STREAM(字节流套接字)，SOCK_DGRAM(数据报套接字)，SOCK_SEQPACKET(有序分组套接字)，SOCK_RAW(原始套接字)。  
+protocol: protocol指传输层协议类型，可选的有IPPROTO_TCP(TCP协议)，IPPROTO_UDP(UDP协议)，IPPROTO_SCTP(SCTP协议)。  
+  
+**注意：**socket函数的三个参数不能随意组合，常用的组合如下：  
+SOCK_STREAM+AF_INET/AF_INET6 --> TCP/SCTP协议   (最常用)  
+SOCK_DGRAM+AF_INET/AF_INET6 --> UDP协议  
+SOCK_SEQPACKET+AF_INET/AF_INET6 --> SCTP协议  
+  
+函数成功执行返回非负描述符，出错返回-1。  
+#### 第二步 设置套接字地址结构
+结构原型：  
+```
+#include <netinet/in.h>
+
+struct sockaddr_in {
+    short            sin_family;
+    unsigned short   sin_port;
+    struct in_addr   sin_addr;
+    char             sin_zero[8];
+};
+
+struct in_addr {
+    unsigned long s_addr;
+};
+
+```
+这里sin_family指的是协议类型，sin_port指端口，sin_addr.s_addr指远程ip地址。我们举个例子：  
+```
+struct sockaddr_in saddr;  //定义一个套接字地址结构
+memset(&saddr,0,sizeof(saddr));  //这里也可使用bzero() [bzero(&saddr,sizeof(saddr))]
+saddr.sin_family = AF_INET;  //指定ipv4协议簇
+saddr.sin_port = htons(PORT);  //端口   htons()作用是将主机字节序转化为网络字节序
+saddr.sin_addr.s_addr = htonl(INADDR_ANY);  //允许的ip地址 INADDR_ANY 即任意地址
+```
+以上代码即设置了一个服务器端的套接字地址结构。
+#### 第三步 绑定套接字
+函数原型：```int bind(int sockfd, const struct sockaddr *addr,socklen_t addrlen);```   
+sockfd: 套接字描述符  
+addr: 套接字地址结构  
+addrlen: 地址结构长度  
+函数的作用是把一个本地协议地址赋予一个套接字。对于网际网协议，协议地址是32位的ipv4地址或128位的ipv6地址与16位的TCP或UDP端口号的组合。  
+调用bind函数可以选择指定IP或端口号，可以都指定，也可以都不指定。指定或不指定(上一步设置套接字地址结构的时候选择是否指定sin_port和sin_addr.s_addr)的预期结果如下:  
+
+|    IP地址    | 端口 | 结果 |
+| ---------- | --- | ---------- |
+| 通配地址 |  0 | 内核选择IP地址和端口 |
+| 通配地址   | 非0 | 内核选择IP地址，进程指定端口 |
+| 本地IP地址  | 0 | 进程指定IP地址，内核选择端口 |
+| 本地IP地址 | 非0 | 进程指定IP地址和端口 |
+
+#### 第四步 设置监听
+函数原型：```int listen(int sockfd,int backlog);```   
+sockfd: 套接字描述符  
+backlog: 允许的最大连接数量  
+这个函数有两个作用：①将我们创建的主动套接字转换为被动套接字，以接收客户端请求；②规定内核应该为响应套接字排队的最大连接个数。  
+#### 第五步 接收请求
+函数原型：```int accept(int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen);```  
+sockfd:服务器端套接字描述符  
+cliaddr 和 addrlen 用来返回已连接的对端进程(客户端)的协议地址。  
+如果accept成功，函数返回一个全新描述符，代表与所返回客户的TCP连接。  
+#### 第六步 接收客户端请求内容
+函数原型：  
+```
+ssize_t read(int fd, void *buf, size_t count);
+
+ssize_t readv(int fd, const struct iovec *iov, int iovcnt);
+
+ssize_t recv(int sockfd, void* buf, size_t len, int flags);
+
+ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags,
+                        struct sockaddr *src_addr, socklen_t *addrlen);
+
+ssize_t recvmsg(int sockfd, struct msghdr *msg, int flags);
+```
+这里只分析recv函数，其他函数的具体用法和注意事项自行谷歌。(篇幅限制内容太多)  
+```
+ssize_t recv(int sockfd,void* buf,size_t len,int flags);
+```
+这个函数用于获取客户端发送的数据，并存入buf中。   
+sockfd:这里需要填写的是客户端套接字描述符  
+buf:客户端发来的数据将存入buf中  
+len:读取数据的长度  
+flags:接收参数，可能的取值如下:
+
+|    flags    | 说明 |
+| ---------- | --- |
+| MSG_DONTROUTE |  绕过路由表查找 |
+| MSG_DONTWAIT |  本次操作非阻塞 |
+| MSG_OOB  | 发送或接收带外数据 |
+| MSG_PEEK | 窥看外来消息 |
+| MSG_WAITALL | 等待所有数据 |
+
+#### 第七步 响应客户端请求
+函数原型：
+```
+ssize_t write(int fd, const void *buf, size_t count);
+
+ssize_t writev(int fildes, const struct iovec *iov, int iovcnt);
+
+ssize_t send(int sockfd, const void *buf, size_t len, int flags);
+
+ssize_t sendto(int sockfd, const void *buf, size_t len, int flags,
+                      const struct sockaddr *dest_addr, socklen_t addrlen);
+
+ssize_t sendmsg(int sockfd, const struct msghdr *msg, int flags);
+```
+这里只分析send函数，其他函数的具体用法和注意事项自行谷歌。(篇幅限制内容太多)  
+```
+ssize_t send(int sockfd, const void *buf, size_t len, int flags);
+```
+这个函数用于将buf中的数据传回客户端。  
+sockfd: 客户端套接字描述符  
+buf: 欲传回客户端的数据  
+len: 传回数据的长度  
+flags: 发送参数，可能的取值同recv()  
+#### 第八步 关闭套接字
+函数原型：```int close(int fd);```  
+这个函数用来关闭套接字，并终止TCP连接。  
+
+## 0x04 我们来写一个完整的服务器端代码
+```
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <errno.h>
+
+#define BACKLOG	5		//允许的连接队列长度
+#define PORT	 7546	//连接端口
+#define RECVBUFF 1048576   //接收缓冲区长度
+#define SENDBUFF 1048576   //发送缓冲区长度
+
+char ReceiveBuffer[RECVBUFF];   //接收缓冲区
+char SendBuffer[SENDBUFF];    //发送缓冲区
+
+int main(int argc,char** argv){
+    int client;   //对端(客户端)套接字文件描述符
+    int sfd = socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);  //创建套接字  ipv4协议簇  字节流套接字  使用TCP协议   (若第三个参数置零，则默认TCP/SCTP协议)
+    if (sfd == -1){
+        perror("create socket failed.");
+        return -1;
+    }
+    
+    struct sockaddr_in saddr;  //服务器端套接字地址结构
+    struct sockaddr_in peer_saddr;  // 对端(客户端)套接字地址结构
+    socklen_t peer_len = sizeof(struct sockaddr);   //由peer_saddr指定的套接字地址结构长度
+    memset(&saddr,0,sizeof(saddr));  //这里也可使用bzero()函数  
+    saddr.sin_family = AF_INET;  //指定ipv4协议簇
+    saddr.sin_port = htons(PORT);  //端口   由主机字节序转化为网络字节序
+    saddr.sin_addr.s_addr = INADDR_ANY;  //允许的ip地址 INADDR_ANY 即任意地址
+    if(bind(sfd,(struct sockaddr*)&saddr,sizeof(struct sockaddr)) == -1){   //bind(). 绑定套接字 sfd 文件描述符 和 saddr 套接字地址结构
+        perror("bind socket error!");
+        return -1;
+    }
+    
+    if(listen(sfd,BACKLOG) == -1){  //listen(). 启动监听  本步将sfd主动套接字转化为被动监听套接字
+        perror("listen error!");
+        return -1;
+    }
+    
+    while(1){  //无限循环接收客户端请求
+        client = accept(sfd,(struct sockaddr*)&peer_saddr,&peer_len);   //收到客户端请求，接受请求  否则本步阻塞监听
+        if (client == -1){
+            perror("error in accept.");
+            return -1;
+        } 
+        else {
+            printf("accept client:%s:%d\n",inet_ntoa(peer_saddr.sin_addr),peer_len);
+        }
+        memset(ReceiveBuffer,'\0',sizeof(ReceiveBuffer));
+        memset(SendBuffer,'\0',sizeof(SendBuffer));
+        
+        recv(client,ReceiveBuffer,RECVBUFF,0);  //若客户端发送了数据，接收客户端发来的数据 否则本步阻塞接收数据
+        if((strcmp(ReceiveBuffer,"")) == 0){
+            continue;
+        }
+        printf("recv:%s\n",ReceiveBuffer);
+
+        strcpy(SendBuffer,Analysis(ReceiveBuffer));  //分析数据
+
+        if (strcmp(SendBuffer,"") != 0){
+            send(client,SendBuffer,SENDBUFF,0);  //向客户端回返数据
+            printf("send:%s\n",SendBuffer);
+        } 
+    }
+    close(sfd);  //关闭套接字
+    return 0;
+
+}
+```
+其中第23行完成创建套接字，33-35行完成套接字地址结构设定，36行完成套接字绑定，41行完成套接字监听，47行完成接收客户端请求，58行完成接收客户端请求内容，64行完成客户端请求处理，67行完成客户端请求响应，71行完成关闭套接字。  
+
+## 0x05 客户端程序
+服务器端写好了，客户端怎么写呢？其实客户端比服务器端容易很多，设置完套接字后无需绑定和监听的过程，可以直接选择连接服务器端。  
+使用套接字完成客户端构建一共需要6步：创建套接字，设置套接字地址结构，连接服务器，发送请求，接收服务器端响应，关闭套接字。  
+这里只对第三步进行解释，其他的步骤与服务器端相似，不再赘述。  
+#### 第三步 连接服务器
+函数原型：```int connect(int sockfd, const struct sockaddr *addr,socklen_t addrlen);```
+sockfd: 客户端套接字描述符  
+addr: 服务器端套接字地址结构  
+addrlen: 套接字地址结构长度  
+这个函数用于客户端与服务器端建立连接，执行connect函数将激发TCP三次握手。按照TCP状态转换，connect()函数将会使当前套接字从CLOSED状态转移到SYN_SENT状态，若函数执行成功，则再转移到ESTABLISHED状态。  
+## 0x06 举一个客户端的例子
+```
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <errno.h>
+
+#define PORT	 7546	//连接端口
+#define BUFF     1048576
+
+char buf[BUFF];
+int main()
+{
+	int client_socket = socket(AF_INET, SOCK_STREAM, 0);   //创建和服务器连接套接字
+	if(client_socket == -1){
+		perror("socket");
+		return -1;
+	}
+
+	struct sockaddr_in addr;
+	memset(&addr, 0, sizeof(addr));
+	addr.sin_family = AF_INET;  /* Internet地址族 */
+    addr.sin_port = htons(PORT);  /* 端口号 */
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);   /* IP地址 */
+	inet_aton("127.0.0.1", &(addr.sin_addr));
+	int addrlen = sizeof(addr);
+
+	//连接服务器
+	int listen_socket =  connect(client_socket,  (struct sockaddr *)&addr, addrlen);
+	if(listen_socket == -1)
+	{
+		perror("connect");
+		return -1;
+	}
+
+	printf("成功连接到服务器\n");
+
+	char buf[SIZE] = {0};
+
+	while(1){
+		printf("请输入：");
+		scanf("%s", buf);
+		send(client_socket, buf, strlen(buf),0);
+		
+		int ret = recv(client_socket, buf, strlen(buf),0);
+		
+		printf("buf = %s", buf);
+		printf("\n");
+		if(strncmp(buf, "END", 3) == 0)     //当输入END时客户端退出
+		{
+			break;
+		}
+	}
+	close(listen_socket);
+	
+	return 0;
+}
+```
+## 0x07 总结一下
+我们成功地实现了使用C语言完成类似js的前后端交互。不过我们并没有使用http的应用层协议，而是仅仅发送数据，处理数据，接收数据。网络编程的内容多且非常复杂，文章写出来的仅仅是冰山一角。例如，我们现在写的服务器没有太多的错误处理，健壮性不足，不能满足高并发需求，等等。  
+
+
