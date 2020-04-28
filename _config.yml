@@ -25,17 +25,17 @@ nav:
 
 # Footer
 footer:
-  since: 2017
+  since: 2019
 
 # Author 配置博主信息
 author: 'su29029'
 nickname: ''
-bio: 'Web开发
-      Web安全 
-      ctf 
-      UESTC 
-      Travelling
-      Keep going'
+bio: 'Web开发      
+      Web安全      
+      ctf          
+      UESTC        
+      Travelling   
+      Keep going'  
 avatar: '/assets/img/mypicture.png'
 
 # Search
