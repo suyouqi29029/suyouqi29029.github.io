@@ -1,6 +1,6 @@
 ---
 layout: post 
-title: "V1lu0实验室招新hard_sql writeup"
+title: "V1lu0实验室招新hard_sql"
 date: 2020-06-23
 author: su29029
 tags: Web
