@@ -2,7 +2,7 @@
 title: '因为心在那里'
 description: ''
 keyword: ''
-url: '' # your host
+url: 'blog.su29029.xyz' # your host
 
 # when build blog on server, if you don't need baseurl, you should leave this value blank.
 # 在服务器上建站时，如果你不需要子域名，请将这一格留空
