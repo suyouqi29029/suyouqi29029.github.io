@@ -1,4 +1,10 @@
-## 2020-6-30-python爬虫学习(BeautifulSoup)
+---
+layout: post 
+title: "python爬虫学习(BeautifulSoup)"
+date: 2020-06-30
+author: su29029
+tags: Web
+---
 
 今天学习的内容是python爬虫，利用BeautifulSoup库。
 
