@@ -105,7 +105,7 @@ post型宽字节注入，将utf8转为utf16即可绕过。payload：
 堆叠注入。指的是在某些情况下，后端的sql语句执行函数可以执行多条命令(例如mysqli_multi_query())，这个时候我们可以通过;来结束前一条sql语句，随后再在分号后面写入sql，从而实现“堆一堆”sql语句进行注入。而;后的语句理论上没有过滤的话则可以为所欲为。
 不过堆叠注入利用的条件有限，因为一般情况下后台的sql执行函数为安全起见只允许执行单一sql，分号后的语句将会被忽略。
 
-payload(注意引号闭合方式，此处以Less38为例):
+payload(注意引号闭合方式，此处以Less38为例，注意40和41需提前布尔盲注出表名):
 
 ```sql
 1';insert into users(id,username,password) values (100,"a","b"); %23
@@ -113,7 +113,7 @@ payload(注意引号闭合方式，此处以Less38为例):
 
 ##### Less42/43/44/45
 
-这几个题均需在passwd处进行堆叠注入。42,43有回显，44,45无回显。payload:
+这几个题均需在passwd处进行堆叠注入。42,43有回显，44,45无回显(需在passwd字段处布尔盲注出表名)。payload:
 
 ```sql
 1';insert into users(id,username,password) values (100,"a","b"); %23
