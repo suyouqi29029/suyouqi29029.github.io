@@ -1,3 +1,11 @@
+---
+layout: post 
+title: "sqlilab做题总结（一）"
+date: 2020-07-03
+author: su29029
+tags: Web
+---
+
 ## sqlilab做题总结（一）
 
 开始重新系统学习sql注入，本地docker搭建了一个sqlilab的靶场，今天先搞1-20.
