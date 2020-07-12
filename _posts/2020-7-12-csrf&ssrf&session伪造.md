@@ -1,3 +1,11 @@
+---
+layout: post 
+title: "csrf&ssrf&session伪造问题"
+date: 2020-07-12
+author: su29029
+tags: Web
+---
+
 ## csrf&ssrf&session伪造问题
 
 今天学习的内容是csrf，ssrf，session伪造这三个内容。复现平台dvwa&pikachu。
